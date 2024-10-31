@@ -32,7 +32,7 @@ namespace genea {
         double getFitness();
         double getError(Dataframe X, Dataframe y);
         Parameter getParameter();
-        void setParameter(Parameter param);
+        void setParameter(Parameter *param);
         bool operator<(const Individual& obj) const;
     };
     
@@ -75,7 +75,7 @@ namespace genea {
         return this->neuralN->getParam();
     }
 
-    void Individual::setParameter(Parameter param){
+    void Individual::setParameter(Parameter *param){
         this->neuralN->setParam(param);
     }
 

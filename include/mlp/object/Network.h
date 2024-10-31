@@ -21,8 +21,7 @@ namespace mlp {
         private:
             Layer *input_ly, *output_ly;
             vector<Layer*> hidden_lys;
-            Parameter parameter;
-            Parameter *param;
+            Parameter *parameter; // Changed to pointer
             void forward(vector<double>& inputs);
             void backward(vector<double>& outputs, double lr, double momentum);
             void update_param();
@@ -38,24 +37,21 @@ namespace mlp {
             vector<double> predict_one(vector<double> input);
             Dataframe predict(Dataframe inputs);
             Parameter getParam();
-            void setParam(Parameter parameter);
+            void setParam(Parameter *parameter);
     };
 
-    Network::Network()
-    {
-    }
+    Network::Network() : parameter(nullptr) {}
 
-    Network::Network(vector<layer_info> layers){
-        this->parameter = Parameter(layers);
-        Parameter *param = new Parameter(layers);
+    Network::Network(vector<layer_info> layers) {
+        parameter = new Parameter(layers);  // Allocate memory for parameter pointer
         int ly_count = 0;
         for(layer_info l_info : layers){
             Layer* layer = new Layer(ly_count, l_info.type == HIDDEN, l_info.N_node, l_info.activation);
             if(l_info.type == INPUT){
                 input_ly = layer;
-            }else if(l_info.type == OUTPUT){
+            } else if(l_info.type == OUTPUT){
                 output_ly = layer;
-            }else{
+            } else {
                 hidden_lys.push_back(layer);
             }
             ly_count++;
@@ -67,7 +63,7 @@ namespace mlp {
                 hidden_lys[i]->connect(hidden_lys[i-1], parameter);
             }
             output_ly->connect(hidden_lys[hidden_lys.size()-1], parameter);
-        }else{
+        } else {
             output_ly->connect(input_ly, parameter);
         }
     }
@@ -78,13 +74,12 @@ namespace mlp {
         for (Layer* layer : hidden_lys) {
             delete layer;
         }
-        delete param;
+        delete parameter;  // Free memory for parameter
     }
 
     void Network::info(){
         for(int i = 1; i <= hidden_lys.size(); i++){
-            cout << printf("layer %d : ", i);
-            cout << &hidden_lys[i-1];
+            cout << "layer " << i << " : " << hidden_lys[i-1] << endl;
         }
     }
 
@@ -116,11 +111,14 @@ namespace mlp {
     }
 
     Parameter Network::getParam(){
-        return this->parameter;
+        return *parameter;
     }
 
-    void Network::setParam(Parameter parameter){
-        this->parameter = parameter;
+    void Network::setParam(Parameter *parameter){
+        if (this->parameter != nullptr) {
+            delete this->parameter; // Delete old parameter if exists
+        }
+        this->parameter = parameter;  // Assign new parameter pointer
         for(int i = 0; i < hidden_lys.size(); i++){
             hidden_lys[i]->push_param(parameter);
         }
@@ -159,17 +157,16 @@ namespace mlp {
                 vector<double> y_ls = output_ly->get_output();
                 double sse = 0;
                 for(int i = 0; i < y_ls.size(); i++){
-                    // if(!isnan(y_ls[i])) cout << y_ls[i] << "\n";
                     sse += pow(outputs[i] - y_ls[i], 2);
                 }
 
-                error += sse/2.0;
+                error += sse / 2.0;
 
                 this->backward(outputs, lr, momentum);
                 index_ls.erase(index_ls.begin() + rnum);
             }
 
-            error_ls.push_back(error/X.get_depth());
+            error_ls.push_back(error / X.get_depth());
         }
 
         this->update_param();
@@ -191,10 +188,10 @@ namespace mlp {
                 sse += pow(outputs[i] - y_ls[i], 2);
             }
 
-            error += sse/2.0;
+            error += sse / 2.0;
         }
 
-        return error/X.get_depth();
+        return error / X.get_depth();
     }
 
     vector<double> Network::predict_one(vector<double> inputs){

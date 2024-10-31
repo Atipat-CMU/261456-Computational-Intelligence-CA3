@@ -39,8 +39,6 @@ namespace mlp {
     }
 
     Parameter::Parameter(vector<layer_info> layers){
-        srand(time(0));
-        
         for(int j = 0; j < layers.size(); j++){
             layer_info curr_ly = layers[j];
             vector<double> weight_ly;

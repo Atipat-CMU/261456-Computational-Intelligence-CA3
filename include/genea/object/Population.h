@@ -24,8 +24,8 @@ namespace genea {
         vector<Individual*> getTop(vector<Individual*> p, int top);
         void setGroupP(indiv_status st, vector<Individual*> target);
         void setGroupP(indiv_status st, int start, int end);
-        Parameter mating(Parameter in1, Parameter in2);
-        Parameter mutate(Parameter in);
+        Parameter* mating(Parameter in1, Parameter in2);
+        Parameter* mutate(Parameter in);
         void selectToP1();
         void createP2();
         void createP3();
@@ -63,7 +63,6 @@ namespace genea {
     }
 
     double Population::random(double min, double max){
-        srand(time(0));
         float r1 = (float)rand() / (float)RAND_MAX;
         return min + r1 * (max - min);
     }
@@ -80,6 +79,13 @@ namespace genea {
     }
 
     vector<Individual*> Population::getTop(vector<Individual*> p, int top){
+        for (Individual* indiv : p) {
+            indiv->fit(this->X, this->y);
+        }
+        sort(p.begin(), p.end(), [](Individual* a, Individual* b) {
+            return a->getFitness() < b->getFitness(); // Sorting in descending order of fitness
+        });
+
         vector<Individual*> target_indiv;
 
         for(int i = p.size()-top; i < p.size(); i++){
@@ -101,7 +107,7 @@ namespace genea {
         }
     }
 
-    Parameter Population::mating(Parameter in1, Parameter in2){
+    Parameter* Population::mating(Parameter in1, Parameter in2){
         random_device rd;
         mt19937 gen(rd());
         uniform_int_distribution<> distrib(1, 2);
@@ -144,11 +150,11 @@ namespace genea {
             bias_ly.clear();
         }
 
-        return Parameter(weight_lys, bias_lys);
+        return new Parameter(weight_lys, bias_lys);
     }
 
-    Parameter Population::mutate(Parameter in){
-        double pm = 0.1;
+    Parameter* Population::mutate(Parameter in){
+        double pm = 0.5;
 
         vector<vector<double>> weight_lys = in.get_weight_lys();
         vector<vector<double>> bias_lys = in.get_bias_lys();
@@ -179,15 +185,11 @@ namespace genea {
             bias_lys_new.push_back(bias_ly_new);
         }
 
-        return Parameter(weight_lys_new, bias_lys_new);
+        return new Parameter(weight_lys_new, bias_lys_new);
     }
 
     void Population::selectToP1(){
-        for (Individual* indiv : p) {
-            indiv->fit(this->X, this->y);
-        }
-        sort(p.begin(), p.end());
-        vector<Individual*> p1 = this->getTop(p, int(this->number*0.5));
+        vector<Individual*> p1 = this->getTop(p, int(this->number*0.8));
         this->setGroupP(P1, p1);
     }
 
@@ -198,14 +200,14 @@ namespace genea {
         mt19937 gen(rd());
         uniform_int_distribution<> distrib(0, p1.size() - 1);
 
-        for(int i = 0; i < int(this->number*0.5); i++){
+        for(int i = 0; i < int(this->number*0.8); i++){
             int id1 = distrib(gen);
             int id2 = distrib(gen);
             while (id1 == id2) id2 = distrib(gen);
 
             Parameter in1 = p1[id1]->getParameter();
             Parameter in2 = p1[id2]->getParameter();
-            Parameter ofs = this->mating(in1, in2);
+            Parameter* ofs = this->mating(in1, in2);
 
             Individual* indiv = new Individual(layers);
             indiv->setParameter(ofs);
@@ -227,7 +229,6 @@ namespace genea {
         this->setGroupP(NP, p3);
 
         vector<Individual*> p1 = this->getGroupP(P1);
-        sort(p1.begin(), p1.end());
         this->setGroupP(NP, this->getTop(p1, int(this->number*0.25)));
 
         vector<Individual*> p0 = this->getGroupP(NONE);
@@ -272,9 +273,10 @@ namespace genea {
         for (Individual* indiv : p) {
             indiv->fit(this->X, this->y);
         }
-        sort(p.begin(), p.end());
-        cout << p[p.size()-1]->getError(X, y) << endl;
-        return p[0]->getError(X, y);
+        sort(p.begin(), p.end(), [](Individual* a, Individual* b) {
+            return a->getFitness() < b->getFitness();
+        });
+        return p[p.size()-1]->getFitness();
     }
 
     void Population::setData(Dataframe X, Dataframe y){

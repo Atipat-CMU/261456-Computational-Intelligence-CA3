@@ -32,7 +32,7 @@ namespace mlp {
 
         public:
             Layer();
-            Layer(int ly_id,bool is_hidden, int N_node, double (*activation)(double, bool));
+            Layer(int ly_id, bool is_hidden, int N_node, double (*activation)(double, bool));
             ~Layer();
 
             Layer(const Layer& other);
@@ -41,22 +41,20 @@ namespace mlp {
             int size();
 
             vector<Neural*> get_neurals() const;
-            void connect(Layer* prev_ly, Parameter param);
+            void connect(Layer* prev_ly, Parameter* param);
             void set_out_edges(edge_set out_edges);
             void set_input(vector<double>& inputs);
             void forward();
             void updateGrad(vector<double>& outputs);
             void backprop(double lr, double momentum);
             vector<double> get_output();
-            void pull_param(Parameter &param);
-            void push_param(Parameter &param);
+            void pull_param(Parameter* param);
+            void push_param(Parameter* param);
     };
 
-    Layer::Layer()
-    {
-    }
+    Layer::Layer() {}
 
-    Layer::Layer(int ly_id, bool is_hidden, int N_node, double (*activation)(double, bool)){
+    Layer::Layer(int ly_id, bool is_hidden, int N_node, double (*activation)(double, bool)) {
         this->ly_id = ly_id;
         this->is_hidden = is_hidden;
         for(int i = 0; i < N_node; i++){
@@ -127,7 +125,7 @@ namespace mlp {
         }
     }
 
-    int Layer::size(){
+    int Layer::size() {
         return neurals.size();
     }
 
@@ -135,7 +133,7 @@ namespace mlp {
         return neurals;
     }
 
-    void Layer::connect(Layer* prev_ly, Parameter param){
+    void Layer::connect(Layer* prev_ly, Parameter* param) {
         int weight_count = 0;
         int bias_count = 0;
         for (Neural* nl : neurals) {
@@ -143,7 +141,7 @@ namespace mlp {
             edge_set edges_out;
 
             for(Neural* prev_nl : prev_ly->get_neurals()){
-                double weight = param.get_weight_ly(this->ly_id)[weight_count];
+                double weight = param->get_weight_ly(this->ly_id)[weight_count];
                 Edge* edge = new Edge(nl, prev_nl, weight);
                 edges_in.push_back(edge);
                 edges_out[prev_nl].push_back(edge);
@@ -152,7 +150,7 @@ namespace mlp {
 
             Neural* bias = new Neural(1);
             bias_ls.push_back(bias);
-            double weight = param.get_bias_ly(this->ly_id)[bias_count];
+            double weight = param->get_bias_ly(this->ly_id)[bias_count];
             Edge* edge = new Edge(nl, bias, weight);
             edges_in.push_back(edge);
             bias_count++;
@@ -162,17 +160,17 @@ namespace mlp {
         }
     }
 
-    void Layer::set_out_edges(edge_set out_edges){
+    void Layer::set_out_edges(edge_set out_edges) {
         this->out_edges = out_edges;
     }
 
-    void Layer::set_input(vector<double>& inputs){
+    void Layer::set_input(vector<double>& inputs) {
         for(int i = 0; i < inputs.size(); i++){
             neurals[i]->setY(inputs[i]);
         }
     }
 
-    vector<double> Layer::get_output(){
+    vector<double> Layer::get_output() {
         this->forward();
         vector<double> outputs;
         for(int i = 0; i < neurals.size(); i++){
@@ -181,27 +179,27 @@ namespace mlp {
         return outputs;
     }
 
-    void Layer::pull_param(Parameter &param){
+    void Layer::pull_param(Parameter* param) {
         vector<double> weight_ls;
         vector<double> bias_ls;
-        for(Neural *n : neurals){
+        for(Neural* n : neurals){
             vector<Edge*> edges = in_edges[n];
-            for(Edge *e : edges){
+            for(Edge* e : edges){
                 weight_ls.push_back(e->getW());
             }
             bias_ls.push_back(weight_ls.back());
             weight_ls.pop_back();
         }
         
-        param.set_weight_ly(ly_id, weight_ls);
-        param.set_bias_ly(ly_id, bias_ls);
+        param->set_weight_ly(ly_id, weight_ls);
+        param->set_bias_ly(ly_id, bias_ls);
     }
 
-    void Layer::push_param(Parameter &param){
-        vector<double> weight_ls = param.get_weight_ly(ly_id);
-        vector<double> bias_ls = param.get_bias_ly(ly_id);
+    void Layer::push_param(Parameter* param) {
+        vector<double> weight_ls = param->get_weight_ly(ly_id);
+        vector<double> bias_ls = param->get_bias_ly(ly_id);
         int w_c = 0, b_c = 0;
-        for(Neural *n : neurals){
+        for(Neural* n : neurals){
             vector<Edge*> edges = in_edges[n];
             for(int i = 0; i < edges.size() - 1; i++){
                 edges[i]->setW(weight_ls[w_c]);
@@ -211,22 +209,22 @@ namespace mlp {
             b_c++;
         }
         
-        param.set_weight_ly(ly_id, weight_ls);
-        param.set_bias_ly(ly_id, bias_ls);
+        param->set_weight_ly(ly_id, weight_ls);
+        param->set_bias_ly(ly_id, bias_ls);
     }
 
-    void Layer::forward(){
-        for(Neural *n : neurals){
+    void Layer::forward() {
+        for(Neural* n : neurals){
             vector<Edge*> edges = in_edges[n];
             double v = 0;
-            for(Edge *e : edges){
+            for(Edge* e : edges){
                 v += e->getTail()->getY() * e->getW();
             }
             n->update(v);
         }
     }
 
-    void Layer::updateGrad(vector<double>& outputs){
+    void Layer::updateGrad(vector<double>& outputs) {
         if(is_hidden){
             for(int i = 0; i < neurals.size(); i++){
                 double sum = 0;
@@ -235,14 +233,14 @@ namespace mlp {
                 }
                 neurals[i]->updateGradHidden(sum);
             }
-        }else{
+        } else {
             for(int i = 0; i < neurals.size(); i++){
                 neurals[i]->updateGradOutput(outputs[i]);
             }
         }
     }
 
-    void Layer::backprop(double lr, double momentum){
+    void Layer::backprop(double lr, double momentum) {
         for(int i = 0; i < neurals.size(); i++){
             for(Edge* e : in_edges[neurals[i]]){
                 double deltaW = lr * neurals[i]->getG() * e->getTail()->getY();
