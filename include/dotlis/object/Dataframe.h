@@ -35,6 +35,7 @@ namespace dotlis {
             Dataframe get_column_without(const vector<int>& columns) const;
             Dataframe get_onehot(const int& column) const;
             vector<Dataframe> split_n(int n);
+            pair<Dataframe, Dataframe> split_train_test(double train_percent);
             void extend(Dataframe other);
 
             Dataframe random();
@@ -267,6 +268,26 @@ namespace dotlis {
             df_ls.push_back(Dataframe(table));
         }
         return df_ls;
+    }
+
+    pair<Dataframe, Dataframe> Dataframe::split_train_test(double train_percent) {
+        if (train_percent < 0.0 || train_percent > 1.0) {
+            throw invalid_argument("Training percentage must be between 0.0 and 1.0");
+        }
+
+        // Shuffle the data to ensure random splitting
+        srand(static_cast<unsigned int>(time(0)));
+        vector<vector<double>> shuffled_table = this->table;
+        random_shuffle(shuffled_table.begin(), shuffled_table.end());
+
+        int train_size = static_cast<int>(train_percent * shuffled_table.size());
+
+        // Create train and test tables
+        vector<vector<double>> train_table(shuffled_table.begin(), shuffled_table.begin() + train_size);
+        vector<vector<double>> test_table(shuffled_table.begin() + train_size, shuffled_table.end());
+
+        // Return as a pair of Dataframes
+        return { Dataframe(train_table), Dataframe(test_table) };
     }
 
     void Dataframe::extend(Dataframe other){

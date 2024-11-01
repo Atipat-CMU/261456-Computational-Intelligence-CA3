@@ -12,9 +12,8 @@ int main(){
 
     Dataframe df = read_csv("wdbc.data");
     df = df.get_column_without({0});
-    
-    df.to_csv("dataset2.csv");
-    df.get_onehot(0).to_csv("onehot.csv");
+
+    df = df.split_train_test({0.9}).first;
 
     vector<layer_info> layers = {
         {INPUT, nullptr, 30},
@@ -30,8 +29,16 @@ int main(){
 
     networks.setData(X_train, y_train);
 
+    double max = 0;
+    double current = 0;
+
     for(int generation = 0; generation < 1000; generation++){
-        cout << "generation " << generation << ": " << networks.getError() << endl;
+        current = networks.getFitness();
+        if(current > max){
+            max = current;
+            networks.getBestParam().to_file("10-10.param");
+        }
+        cout << "generation " << generation << ": " << current << endl;
         networks.next();
     }
     

@@ -37,7 +37,8 @@ namespace genea {
         ~Population();
 
         void setData(Dataframe X, Dataframe y);
-        double getError();
+        double getFitness();
+        Parameter getBestParam();
         void next();
     };
     
@@ -229,7 +230,7 @@ namespace genea {
         this->setGroupP(NP, p3);
 
         vector<Individual*> p1 = this->getGroupP(P1);
-        this->setGroupP(NP, this->getTop(p1, int(this->number*0.25)));
+        this->setGroupP(NP, this->getTop(p1, int(this->number*0.2)));
 
         vector<Individual*> p0 = this->getGroupP(NONE);
 
@@ -269,7 +270,7 @@ namespace genea {
         replaceP();
     }
 
-    double Population::getError(){
+    double Population::getFitness(){
         for (Individual* indiv : p) {
             indiv->fit(this->X, this->y);
         }
@@ -277,6 +278,16 @@ namespace genea {
             return a->getFitness() < b->getFitness();
         });
         return p[p.size()-1]->getFitness();
+    }
+
+    Parameter Population::getBestParam(){
+        for (Individual* indiv : p) {
+            indiv->fit(this->X, this->y);
+        }
+        sort(p.begin(), p.end(), [](Individual* a, Individual* b) {
+            return a->getFitness() < b->getFitness();
+        });
+        return p[p.size()-1]->getParameter();
     }
 
     void Population::setData(Dataframe X, Dataframe y){
